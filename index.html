@@ -68,9 +68,9 @@ body {
 
 .tabs { display: flex; background: var(--black); border-bottom: 1px solid var(--border); }
 .tab {
-  flex: 1; padding: 12px 8px;
-  font-family: 'Oswald', sans-serif; font-size: 13px; font-weight: 600;
-  letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer;
+  flex: 1; padding: 12px 4px;
+  font-family: 'Oswald', sans-serif; font-size: 12px; font-weight: 600;
+  letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
   border: none; background: transparent; color: var(--muted);
   border-bottom: 2px solid transparent; transition: all 0.15s;
 }
@@ -258,6 +258,7 @@ body {
   <button class="tab active" onclick="switchTab('add')">+ Add</button>
   <button class="tab" onclick="switchTab('bets')">Bets</button>
   <button class="tab" onclick="switchTab('cappers')">Cappers</button>
+  <button class="tab" onclick="switchTab('bankroll')">Bankroll</button>
 </div>
 
 <!-- ADD TAB -->
@@ -269,8 +270,17 @@ body {
   <div class="field-grid">
     <div class="field-block field-full">
       <label class="field-label">Capper</label>
-      <input type="text" class="field-input" id="f_capper" placeholder="Who's the pick from?" autocomplete="off" oninput="checkReady()" list="capperList">
-      <datalist id="capperList"></datalist>
+      <select class="field-input" id="f_capper" onchange="onCapperChange()">
+        <option value="">Select...</option>
+        <option>Cody</option>
+        <option>LCap</option>
+        <option>Sharp</option>
+        <option>JA Cav</option>
+        <option>Jewish Sharp</option>
+        <option>AMPM Picks</option>
+        <option value="__other__">Other...</option>
+      </select>
+      <input type="text" class="field-input" id="f_capper_other" placeholder="Capper name" autocomplete="off" oninput="checkReady()" style="display:none; margin-top:8px;">
     </div>
     <div class="field-block field-full">
       <label class="field-label">Pick / Teams</label>
@@ -284,6 +294,16 @@ body {
       <label class="field-label">Wager ($)</label>
       <input type="number" class="field-input" id="f_wager" placeholder="50">
     </div>
+    <div class="field-block field-full">
+      <label class="field-label">Book</label>
+      <select class="field-input" id="f_book">
+        <option value="">Select...</option>
+        <option>FanDuel</option>
+        <option>MGM</option>
+        <option>DraftKings</option>
+        <option>Polymarket</option>
+      </select>
+    </div>
   </div>
 
   <label class="field-label">Result</label>
@@ -293,7 +313,7 @@ body {
     <button class="out-btn" id="ob-loss"    onclick="selectOutcome('Loss')">❌ Lost</button>
   </div>
 
-  <div class="more-toggle" id="moreToggle" onclick="toggleMore()">+ Sport / Type / Book (optional)</div>
+  <div class="more-toggle" id="moreToggle" onclick="toggleMore()">+ Sport / Type (optional)</div>
   <div class="field-grid more-fields" id="moreFields" style="display:none">
     <div class="field-block">
       <label class="field-label">Sport</label>
@@ -310,14 +330,6 @@ body {
         <option value="">Select...</option>
         <option>Moneyline</option><option>Spread</option><option>Over/Under</option>
         <option>Parlay</option><option>Prop</option><option>Futures</option><option>Teaser</option><option>Other</option>
-      </select>
-    </div>
-    <div class="field-block field-full">
-      <label class="field-label">Book</label>
-      <select class="field-input" id="f_book">
-        <option value="">Select...</option>
-        <option>FanDuel</option><option>DraftKings</option><option>BetMGM</option><option>Caesars</option>
-        <option>PointsBet</option><option>ESPNBet</option><option>BetRivers</option><option>Hard Rock</option><option>Other</option>
       </select>
     </div>
   </div>
@@ -340,10 +352,17 @@ body {
   <div id="cappersList"></div>
 </div>
 
+<!-- BANKROLL TAB -->
+<div id="tab-bankroll" class="content" style="display:none">
+  <div class="section-label">Sportsbook Balances</div>
+  <div id="bankrollList"></div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
 const SK = 'thebook_v3';
+const STARTING_BANKROLL = { 'FanDuel': 1000, 'MGM': 230.26, 'DraftKings': 0, 'Polymarket': 0 };
 let bets = [];
 let outcome = 'Pending';
 let activeFilter = 'All';
@@ -372,18 +391,33 @@ function updateHeaderPnl() {
 }
 
 function switchTab(t) {
-  ['add','bets','cappers'].forEach(k => {
+  ['add','bets','cappers','bankroll'].forEach(k => {
     document.getElementById('tab-'+k).style.display = k===t?'block':'none';
   });
   document.querySelectorAll('.tab').forEach((el,i) => {
-    el.classList.toggle('active', ['add','bets','cappers'][i]===t);
+    el.classList.toggle('active', ['add','bets','cappers','bankroll'][i]===t);
   });
   if (t==='bets') renderBets();
   if (t==='cappers') renderCappers();
+  if (t==='bankroll') renderBankroll();
+}
+
+function getCapperValue() {
+  const sel = document.getElementById('f_capper').value;
+  if (sel === '__other__') return document.getElementById('f_capper_other').value.trim();
+  return sel;
+}
+
+function onCapperChange() {
+  const sel = document.getElementById('f_capper').value;
+  const other = document.getElementById('f_capper_other');
+  other.style.display = sel === '__other__' ? 'block' : 'none';
+  if (sel === '__other__') other.focus();
+  checkReady();
 }
 
 function checkReady() {
-  const ok = document.getElementById('f_capper').value.trim();
+  const ok = getCapperValue();
   document.getElementById('logBtn').disabled = !ok;
 }
 
@@ -393,12 +427,7 @@ function toggleMore() {
   const open = f.style.display !== 'none';
   f.style.display = open ? 'none' : 'grid';
   t.classList.toggle('open', !open);
-  t.textContent = open ? '+ Sport / Type / Book (optional)' : '− Hide details';
-}
-
-function updateCapperList() {
-  const cappers = [...new Set(bets.map(b=>b.capper))];
-  document.getElementById('capperList').innerHTML = cappers.map(c=>`<option value="${c}">`).join('');
+  t.textContent = open ? '+ Sport / Type (optional)' : '− Hide details';
 }
 
 function selectOutcome(o) {
@@ -409,7 +438,7 @@ function selectOutcome(o) {
 }
 
 function logBet() {
-  const capper = document.getElementById('f_capper').value.trim();
+  const capper = getCapperValue();
   if (!capper) return;
 
   const bet = {
@@ -433,7 +462,7 @@ function logBet() {
   } catch(e) {}
 
   bets.unshift(bet);
-  save(); buildTicker(); updateHeaderPnl(); updateCapperList();
+  save(); buildTicker(); updateHeaderPnl();
   showToast('Locked In ✓');
   clearForm();
 }
@@ -449,7 +478,10 @@ function applyDefaults() {
 }
 
 function clearForm() {
-  ['f_capper','f_pick'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f_capper').value = '';
+  document.getElementById('f_capper_other').value = '';
+  document.getElementById('f_capper_other').style.display = 'none';
+  document.getElementById('f_pick').value = '';
   document.getElementById('logBtn').disabled = true;
   selectOutcome('Pending');
   applyDefaults();
@@ -577,6 +609,35 @@ function renderCappers() {
   }).join('');
 }
 
+function renderBankroll() {
+  const books = Object.keys(STARTING_BANKROLL);
+  const list = document.getElementById('bankrollList');
+
+  list.innerHTML = books.map(book => {
+    const bookBets = bets.filter(b => b.book === book);
+    const pnl = bookBets.reduce((s,b) => s + calcPnL(b), 0);
+    const starting = STARTING_BANKROLL[book];
+    const current = starting + pnl;
+    const wins = bookBets.filter(b=>b.outcome==='Win').length;
+    const losses = bookBets.filter(b=>b.outcome==='Loss').length;
+    const pending = bookBets.filter(b=>b.outcome==='Pending').length;
+    const pnlC = pnl>=0?'var(--green)':'var(--red)';
+
+    return `<div class="capper-card">
+      <div class="capper-name">${book}</div>
+      <div class="capper-grid">
+        <div class="capper-stat"><div class="cs-val" style="color:var(--neon)">$${starting.toFixed(2)}</div><div class="cs-lbl">Starting</div></div>
+        <div class="capper-stat"><div class="cs-val" style="color:${pnlC}">${pnl>=0?'+':'-'}$${Math.abs(pnl).toFixed(2)}</div><div class="cs-lbl">P&amp;L</div></div>
+        <div class="capper-stat"><div class="cs-val" style="color:var(--amber)">$${current.toFixed(2)}</div><div class="cs-lbl">Current</div></div>
+        <div class="capper-stat"><div class="cs-val" style="color:var(--muted)">${bookBets.length}</div><div class="cs-lbl">Bets</div></div>
+      </div>
+      ${bookBets.length ? `<div class="bet-meta" style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
+        <span>${wins}W</span><span>${losses}L</span><span>${pending} Open</span>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
 function exportCSV() {
   if (!bets.length) { showToast('No bets yet'); return; }
   const h=['Capper','Pick','Odds','Wager','Outcome','P&L','Sport','Type','Book','Date'];
@@ -590,7 +651,7 @@ function exportCSV() {
   a.href=URL.createObjectURL(blob); a.download='the_book.csv'; a.click();
 }
 
-load(); buildTicker(); updateHeaderPnl(); updateCapperList(); applyDefaults();
+load(); buildTicker(); updateHeaderPnl(); applyDefaults();
 </script>
 </body>
 </html>
