@@ -118,6 +118,14 @@ body {
 
 /* OUTCOME */
 .outcome-row { display: flex; gap: 8px; margin-bottom: 16px; }
+.more-toggle {
+  font-family: 'Oswald', sans-serif; font-size: 11px; font-weight: 600;
+  letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase;
+  text-align: center; padding: 10px; margin-bottom: 4px; cursor: pointer;
+  border: 1px dashed var(--border2); border-radius: 8px; transition: all 0.15s;
+}
+.more-toggle:hover, .more-toggle.open { color: var(--neon); border-color: var(--neon-dim); }
+.more-fields { margin-top: 12px; }
 .out-btn {
   flex: 1; padding: 11px 6px; border-radius: 8px; border: 1.5px solid var(--border2);
   font-family: 'Oswald', sans-serif; font-size: 13px; font-weight: 600;
@@ -128,8 +136,8 @@ body {
 .out-btn.active-win     { background: #001a0e; border-color: var(--green); color: var(--green); box-shadow: 0 0 10px rgba(0,232,122,0.2); }
 .out-btn.active-loss    { background: #1a000a; border-color: var(--red);   color: var(--red);   box-shadow: 0 0 10px rgba(255,61,90,0.2); }
 
-/* PARSE BTN */
-.parse-btn {
+/* LOG BTN */
+.log-btn {
   width: 100%; background: linear-gradient(135deg, #c0106e, var(--neon));
   color: #fff; border: none; border-radius: 10px; padding: 15px;
   font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 600;
@@ -137,49 +145,8 @@ body {
   transition: opacity 0.2s, transform 0.1s;
   box-shadow: 0 4px 20px rgba(240,21,138,0.35);
 }
-.parse-btn:active { transform: scale(0.98); }
-.parse-btn:disabled { opacity: 0.3; cursor: not-allowed; box-shadow: none; }
-
-/* STATUS */
-.status-msg {
-  margin-top: 12px; padding: 12px 14px; border-radius: 8px;
-  font-size: 13px; font-family: 'Roboto Mono', monospace;
-  display: none; line-height: 1.5;
-}
-.status-msg.loading { display: block; background: #0d0d20; color: var(--neon); border: 1px solid var(--neon-dim); }
-.status-msg.success { display: block; background: #001a0e; color: var(--green); border: 1px solid #00e87a44; }
-.status-msg.error   { display: block; background: #1a000a; color: var(--red);   border: 1px solid #ff3d5a44; }
-
-/* PARSED PREVIEW */
-.parsed-preview {
-  background: #080814; border: 1px solid var(--neon-dim);
-  border-radius: 12px; padding: 16px; margin-top: 14px; display: none;
-  box-shadow: 0 0 20px rgba(240,21,138,0.1);
-}
-.parsed-preview.show { display: block; }
-.preview-head {
-  font-family: 'Oswald', sans-serif; font-size: 12px; color: var(--neon);
-  text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px;
-  text-shadow: 0 0 8px var(--neon-glow);
-}
-.prow { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
-.prow:last-of-type { border-bottom: none; }
-.prow .pk { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; font-family: 'Oswald', sans-serif; }
-.prow .pv { color: var(--text); font-weight: 600; text-align: right; max-width: 65%; font-family: 'Roboto Mono', monospace; font-size: 12px; }
-.confirm-row { display: flex; gap: 10px; margin-top: 14px; }
-.btn-confirm {
-  flex: 1; background: var(--green); color: #001a0e; border: none; border-radius: 8px; padding: 13px;
-  font-family: 'Oswald', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
-}
-.btn-redo {
-  flex: 1; background: var(--card); color: var(--muted); border: 1px solid var(--border2);
-  border-radius: 8px; padding: 13px; font-family: 'Oswald', sans-serif;
-  font-size: 14px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
-}
-
-/* MANUAL FALLBACK */
-.manual-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-.manual-grid .field-block { margin-bottom: 0; }
+.log-btn:active { transform: scale(0.98); }
+.log-btn:disabled { opacity: 0.3; cursor: not-allowed; box-shadow: none; }
 
 /* STATS */
 .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
@@ -228,6 +195,7 @@ body {
 .badge.loss    { background: #1a000a; color: var(--red);   border: 1px solid #ff3d5a44; }
 .badge.pending { background: #1a1800; color: var(--amber); border: 1px solid #ffb70044; }
 .bet-pick { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 8px; line-height: 1.3; }
+.bet-slip-thumb { width: 100%; max-height: 140px; object-fit: contain; border-radius: 8px; margin-bottom: 10px; border: 1px solid var(--border); background: #000; }
 .bet-meta { display: flex; gap: 12px; flex-wrap: wrap; font-family: 'Roboto Mono', monospace; font-size: 11px; color: var(--muted); }
 .bet-meta .odds-val  { color: var(--amber); font-weight: 600; }
 .bet-meta .wager-val { color: var(--text); }
@@ -312,15 +280,28 @@ body {
     <input type="file" accept="image/*" id="fileInput" onchange="handleFile(event)">
     <div id="uploadInner">
       <div class="upload-icon">📸</div>
-      <div class="upload-label">Upload Bet Slip</div>
-      <div class="upload-sub">Tap to attach screenshot</div>
+      <div class="upload-label">Attach Slip (Optional)</div>
+      <div class="upload-sub">For your reference</div>
     </div>
   </div>
 
   <div class="field-grid">
     <div class="field-block field-full">
       <label class="field-label">Capper</label>
-      <input type="text" class="field-input" id="f_capper" placeholder="Who's the pick from?" autocomplete="off" oninput="checkReady()">
+      <input type="text" class="field-input" id="f_capper" placeholder="Who's the pick from?" autocomplete="off" oninput="checkReady()" list="capperList">
+      <datalist id="capperList"></datalist>
+    </div>
+    <div class="field-block field-full">
+      <label class="field-label">Pick / Teams</label>
+      <input type="text" class="field-input" id="f_pick" placeholder="e.g. Lakers ML, Chiefs -3.5" autocomplete="off">
+    </div>
+    <div class="field-block">
+      <label class="field-label">Odds</label>
+      <input type="text" class="field-input" id="f_odds" placeholder="-110" autocomplete="off">
+    </div>
+    <div class="field-block">
+      <label class="field-label">Wager ($)</label>
+      <input type="number" class="field-input" id="f_wager" placeholder="50">
     </div>
   </div>
 
@@ -331,9 +312,36 @@ body {
     <button class="out-btn" id="ob-loss"    onclick="selectOutcome('Loss')">❌ Lost</button>
   </div>
 
-  <button class="parse-btn" id="parseBtn" onclick="parseBet()" disabled>Read Slip &amp; Log</button>
-  <div class="status-msg" id="statusMsg"></div>
-  <div class="parsed-preview" id="parsedPreview"></div>
+  <div class="more-toggle" id="moreToggle" onclick="toggleMore()">+ Sport / Type / Book (optional)</div>
+  <div class="field-grid more-fields" id="moreFields" style="display:none">
+    <div class="field-block">
+      <label class="field-label">Sport</label>
+      <select class="field-input" id="f_sport">
+        <option value="">Select...</option>
+        <option>NFL</option><option>NBA</option><option>MLB</option><option>NHL</option>
+        <option>NCAAF</option><option>NCAAB</option><option>Soccer</option>
+        <option>UFC/MMA</option><option>Golf</option><option>Tennis</option><option>Other</option>
+      </select>
+    </div>
+    <div class="field-block">
+      <label class="field-label">Bet Type</label>
+      <select class="field-input" id="f_type">
+        <option value="">Select...</option>
+        <option>Moneyline</option><option>Spread</option><option>Over/Under</option>
+        <option>Parlay</option><option>Prop</option><option>Futures</option><option>Teaser</option><option>Other</option>
+      </select>
+    </div>
+    <div class="field-block field-full">
+      <label class="field-label">Book</label>
+      <select class="field-input" id="f_book">
+        <option value="">Select...</option>
+        <option>FanDuel</option><option>DraftKings</option><option>BetMGM</option><option>Caesars</option>
+        <option>PointsBet</option><option>ESPNBet</option><option>BetRivers</option><option>Hard Rock</option><option>Other</option>
+      </select>
+    </div>
+  </div>
+
+  <button class="log-btn" id="logBtn" onclick="logBet()" disabled>Lock It In</button>
 </div>
 
 <!-- BETS TAB -->
@@ -358,9 +366,7 @@ const SK = 'thebook_v3';
 let bets = [];
 let outcome = 'Pending';
 let activeFilter = 'All';
-let imgBase64 = null;
-let imgMime = 'image/jpeg';
-let parsedData = null;
+let slipImg = null;
 
 function save() { try { localStorage.setItem(SK, JSON.stringify(bets)); } catch(e) {} }
 function load() { try { const d = localStorage.getItem(SK); if (d) bets = JSON.parse(d); } catch(e) { bets=[]; } }
@@ -398,21 +404,33 @@ function switchTab(t) {
 
 function handleFile(e) {
   const file = e.target.files[0]; if (!file) return;
-  imgMime = file.type || 'image/jpeg';
   const reader = new FileReader();
   reader.onload = ev => {
-    imgBase64 = ev.target.result.split(',')[1];
+    slipImg = ev.target.result;
     document.getElementById('uploadInner').innerHTML =
-      `<img src="${ev.target.result}" class="preview-img"><div class="img-ok">✓ Slip loaded — enter capper below</div>`;
+      `<img src="${ev.target.result}" class="preview-img"><div class="img-ok">✓ Slip attached</div>`;
     document.getElementById('uploadZone').classList.add('hot');
-    checkReady();
   };
   reader.readAsDataURL(file);
 }
 
 function checkReady() {
-  const ok = imgBase64 && document.getElementById('f_capper').value.trim();
-  document.getElementById('parseBtn').disabled = !ok;
+  const ok = document.getElementById('f_capper').value.trim();
+  document.getElementById('logBtn').disabled = !ok;
+}
+
+function toggleMore() {
+  const f = document.getElementById('moreFields');
+  const t = document.getElementById('moreToggle');
+  const open = f.style.display !== 'none';
+  f.style.display = open ? 'none' : 'grid';
+  t.classList.toggle('open', !open);
+  t.textContent = open ? '+ Sport / Type / Book (optional)' : '− Hide details';
+}
+
+function updateCapperList() {
+  const cappers = [...new Set(bets.map(b=>b.capper))];
+  document.getElementById('capperList').innerHTML = cappers.map(c=>`<option value="${c}">`).join('');
 }
 
 function selectOutcome(o) {
@@ -422,135 +440,60 @@ function selectOutcome(o) {
   document.getElementById('ob-loss').className    = 'out-btn'+(o==='Loss'?' active-loss':'');
 }
 
-async function parseBet() {
+function logBet() {
   const capper = document.getElementById('f_capper').value.trim();
-  if (!imgBase64 || !capper) return;
+  if (!capper) return;
 
-  const btn = document.getElementById('parseBtn');
-  btn.disabled = true; btn.textContent = 'Reading slip...';
-  showStatus('loading', '◈ Analyzing your bet slip...');
-  document.getElementById('parsedPreview').classList.remove('show');
-  parsedData = null;
-
-  const prompt = `Extract sports bet details from this slip. Return ONLY valid JSON, no markdown, no explanation:
-{"teams":"matchup or event","bet_type":"Moneyline/Spread/Over-Under/Parlay/etc","pick":"specific selection","odds":"American odds e.g. -110 or +150","wager":"dollar amount number only","sport":"sport name","game_date":"date if visible or null","book":"sportsbook name or null"}
-Use null for any field you cannot clearly read.`;
-
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
-        messages: [{ role: "user", content: [
-          { type: "image", source: { type: "base64", media_type: imgMime, data: imgBase64 } },
-          { type: "text", text: prompt }
-        ]}]
-      })
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
-    const raw = data.content.map(i => i.text||'').join('');
-    const clean = raw.replace(/```json|```/g,'').trim();
-    parsedData = JSON.parse(clean);
-    parsedData.capper = capper;
-    parsedData.outcome = outcome;
-    parsedData.logged_at = new Date().toISOString();
-    showStatus('success', '✓ Slip read — confirm below');
-    renderParsed(parsedData);
-  } catch(err) {
-    showStatus('error', '⚠ Could not read slip. Fill in manually below.');
-    showManual(capper);
-  }
-  btn.disabled = false; btn.textContent = 'Read Slip & Log';
-}
-
-function renderParsed(d) {
-  const pnl = calcPnL(d);
-  const pp = document.getElementById('parsedPreview');
-  pp.classList.add('show');
-  pp.innerHTML = `
-    <div class="preview-head">◈ Confirm & Log</div>
-    ${pr('Capper', d.capper)}
-    ${pr('Sport', d.sport||'—')}
-    ${pr('Pick', d.pick||d.teams||'—')}
-    ${pr('Type', d.bet_type||'—')}
-    ${pr('Odds', d.odds||'—')}
-    ${pr('Wager', d.wager ? '$'+d.wager : '—')}
-    ${pr('Book', d.book||'—')}
-    ${pr('Result', d.outcome)}
-    ${d.outcome!=='Pending' ? pr('P&L', (pnl>=0?'+$':'-$')+Math.abs(pnl).toFixed(2)) : ''}
-    <div class="confirm-row">
-      <button class="btn-confirm" onclick="confirmBet()">Lock It In</button>
-      <button class="btn-redo" onclick="clearForm()">Redo</button>
-    </div>`;
-}
-
-function pr(k, v) {
-  return `<div class="prow"><span class="pk">${k}</span><span class="pv">${v}</span></div>`;
-}
-
-function showManual(capper) {
-  const pp = document.getElementById('parsedPreview');
-  pp.classList.add('show');
-  pp.innerHTML = `
-    <div class="preview-head">Manual Entry</div>
-    <div class="manual-grid">
-      <div class="field-block" style="grid-column:1/-1"><label class="field-label">Pick / Teams</label><input class="field-input" id="m_teams" placeholder="Lakers ML"></div>
-      <div class="field-block"><label class="field-label">Bet Type</label><input class="field-input" id="m_type" placeholder="Moneyline"></div>
-      <div class="field-block"><label class="field-label">Sport</label><input class="field-input" id="m_sport" placeholder="NBA"></div>
-      <div class="field-block"><label class="field-label">Odds</label><input class="field-input" id="m_odds" placeholder="-110"></div>
-      <div class="field-block"><label class="field-label">Wager ($)</label><input class="field-input" id="m_wager" placeholder="50" type="number"></div>
-    </div>
-    <button class="btn-confirm" style="width:100%" onclick="logManual('${capper}')">Lock It In</button>`;
-}
-
-function logManual(capper) {
-  parsedData = {
-    id: Date.now(), capper, outcome, logged_at: new Date().toISOString(),
-    teams: document.getElementById('m_teams')?.value||'',
-    pick:  document.getElementById('m_teams')?.value||'',
-    bet_type: document.getElementById('m_type')?.value||'',
-    odds:  document.getElementById('m_odds')?.value||'',
-    wager: document.getElementById('m_wager')?.value||'',
-    sport: document.getElementById('m_sport')?.value||'', book: null
+  const bet = {
+    id: Date.now(),
+    capper,
+    pick:   document.getElementById('f_pick').value.trim() || null,
+    odds:   document.getElementById('f_odds').value.trim() || null,
+    wager:  document.getElementById('f_wager').value || null,
+    sport:  document.getElementById('f_sport').value || null,
+    bet_type: document.getElementById('f_type').value || null,
+    book:   document.getElementById('f_book').value || null,
+    slip:   slipImg || null,
+    outcome,
+    logged_at: new Date().toISOString()
   };
-  confirmBet();
+
+  // remember last-used values for quick re-entry
+  try {
+    localStorage.setItem('thebook_last', JSON.stringify({
+      odds: bet.odds, sport: bet.sport, bet_type: bet.bet_type, book: bet.book, wager: bet.wager
+    }));
+  } catch(e) {}
+
+  bets.unshift(bet);
+  save(); buildTicker(); updateHeaderPnl(); updateCapperList();
+  showToast('Locked In ✓');
+  clearForm();
 }
 
-function confirmBet() {
-  if (!parsedData) return;
-  if (!parsedData.id) parsedData.id = Date.now();
-  bets.unshift(parsedData);
-  save(); buildTicker(); updateHeaderPnl();
-  showToast('Locked In ✓');
-  document.getElementById('parsedPreview').classList.remove('show');
-  setTimeout(clearForm, 600);
+function applyDefaults() {
+  let last = {};
+  try { last = JSON.parse(localStorage.getItem('thebook_last') || '{}'); } catch(e) {}
+  document.getElementById('f_odds').value  = last.odds  || '-110';
+  document.getElementById('f_wager').value = last.wager || '';
+  if (last.sport)    document.getElementById('f_sport').value = last.sport;
+  if (last.bet_type) document.getElementById('f_type').value  = last.bet_type;
+  if (last.book)     document.getElementById('f_book').value  = last.book;
 }
 
 function clearForm() {
-  imgBase64 = null; parsedData = null;
+  slipImg = null;
   document.getElementById('fileInput').value = '';
-  document.getElementById('f_capper').value = '';
+  ['f_capper','f_pick'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('uploadZone').classList.remove('hot');
   document.getElementById('uploadInner').innerHTML = `
     <div class="upload-icon">📸</div>
-    <div class="upload-label">Upload Bet Slip</div>
-    <div class="upload-sub">Tap to attach screenshot</div>`;
-  document.getElementById('parsedPreview').classList.remove('show');
-  document.getElementById('statusMsg').style.display = 'none';
-  document.getElementById('parseBtn').disabled = true;
+    <div class="upload-label">Attach Slip (Optional)</div>
+    <div class="upload-sub">For your reference</div>`;
+  document.getElementById('logBtn').disabled = true;
   selectOutcome('Pending');
+  applyDefaults();
 }
-
-function showStatus(type, msg) {
-  const el = document.getElementById('statusMsg');
-  el.className = 'status-msg '+type; el.textContent = msg;
-  if (type==='success') setTimeout(()=>el.style.display='none', 3500);
-}
-
-function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'), 2200);
@@ -620,7 +563,8 @@ function renderBets() {
         <div class="bet-capper">${b.capper}</div>
         <div class="badge ${bdg}">${icon} ${b.outcome}</div>
       </div>
-      <div class="bet-pick">${b.pick||b.teams||'Bet'}</div>
+      ${b.slip?`<img src="${b.slip}" class="bet-slip-thumb">`:''}
+      <div class="bet-pick">${b.pick||'Bet'}</div>
       <div class="bet-meta">
         ${b.sport?`<span>${b.sport}</span>`:''}
         ${b.odds?`<span class="odds-val">${b.odds}</span>`:''}
@@ -677,7 +621,7 @@ function exportCSV() {
   const h=['Capper','Pick','Odds','Wager','Outcome','P&L','Sport','Type','Book','Date'];
   const rows=bets.map(b=>{
     const p=calcPnL(b);
-    return [b.capper,b.pick||b.teams,b.odds,b.wager,b.outcome,p.toFixed(2),b.sport,b.bet_type,b.book,
+    return [b.capper,b.pick,b.odds,b.wager,b.outcome,p.toFixed(2),b.sport,b.bet_type,b.book,
       b.logged_at?new Date(b.logged_at).toLocaleDateString():''].map(v=>`"${v||''}"`).join(',');
   });
   const blob=new Blob([[h.join(','),...rows].join('\n')],{type:'text/csv'});
@@ -685,8 +629,7 @@ function exportCSV() {
   a.href=URL.createObjectURL(blob); a.download='the_book.csv'; a.click();
 }
 
-load(); buildTicker(); updateHeaderPnl();
+load(); buildTicker(); updateHeaderPnl(); updateCapperList(); applyDefaults();
 </script>
 </body>
 </html>
-
