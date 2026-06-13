@@ -215,6 +215,36 @@ body {
 .cs-val { font-family: 'Oswald', sans-serif; font-size: 17px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
 .cs-lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; font-family: 'Oswald', sans-serif; }
 
+/* WEEKLY WIN/LOSS COLUMNS */
+.week-section { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.week-label {
+  font-family: 'Oswald', sans-serif; font-size: 10px; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;
+}
+.wl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.wl-col-header {
+  font-family: 'Oswald', sans-serif; font-size: 10px; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px;
+  text-align: center; padding: 4px; border-radius: 4px;
+}
+.wl-col-header.win  { color: var(--green); background: #001a0e; }
+.wl-col-header.loss { color: var(--red);   background: #1a000a; }
+.wl-row { padding: 6px 4px; border-bottom: 1px solid var(--border); }
+.wl-row:last-child { border-bottom: none; }
+.wl-pick { color: var(--text); font-size: 11px; font-weight: 600; margin-bottom: 2px; line-height: 1.2; }
+.wl-meta { display: flex; justify-content: space-between; font-family: 'Roboto Mono', monospace; font-size: 10px; color: var(--muted); }
+.wl-pnl.up   { color: var(--green); font-weight: 600; }
+.wl-pnl.down { color: var(--red);   font-weight: 600; }
+.wl-empty { color: var(--muted); font-size: 10px; text-align: center; padding: 10px 0; font-family: 'Oswald', sans-serif; letter-spacing: 1px; text-transform: uppercase; }
+.total-bankroll-card {
+  background: linear-gradient(135deg, #1a0a1a, #0f0f1a);
+  border: 1px solid var(--neon-dim); border-radius: 12px;
+  padding: 18px; margin-bottom: 14px; text-align: center;
+  box-shadow: 0 0 20px rgba(240,21,138,0.1);
+}
+.total-bankroll-label { font-family: 'Oswald', sans-serif; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px; }
+.total-bankroll-val { font-family: 'Oswald', sans-serif; font-size: 32px; font-weight: 700; color: var(--neon); text-shadow: 0 0 12px var(--neon-glow); }
+
 .export-btn {
   width: 100%; background: var(--card); color: var(--amber);
   border: 1px solid var(--amber-dim); border-radius: 10px; padding: 13px;
@@ -362,7 +392,7 @@ body {
 
 <script>
 const SK = 'thebook_v3';
-const STARTING_BANKROLL = { 'FanDuel': 1089.46, 'MGM': 230.26, 'DraftKings': 0, 'Polymarket': 0 };
+const STARTING_BANKROLL = { 'FanDuel': 1089.46, 'MGM': 230.26, 'DraftKings': 0, 'Polymarket': 45 };
 let bets = [];
 let outcome = 'Pending';
 let activeFilter = 'All';
@@ -518,44 +548,33 @@ function deleteBet(id) {
 }
 
 function renderBets() {
-  const cappers = [...new Set(bets.map(b=>b.capper))];
+  const pending = bets.filter(b=>b.outcome==='Pending');
+  const cappers = [...new Set(pending.map(b=>b.capper))];
   document.getElementById('filterRow').innerHTML =
     `<button class="chip ${activeFilter==='All'?'active':''}" onclick="setFilter('All')">All</button>`+
     cappers.map(c=>`<button class="chip ${activeFilter===c?'active':''}" onclick="setFilter('${c}')">${c}</button>`).join('');
 
-  const fil = activeFilter==='All'?bets:bets.filter(b=>b.capper===activeFilter);
-  const wins=fil.filter(b=>b.outcome==='Win').length;
-  const losses=fil.filter(b=>b.outcome==='Loss').length;
-  const pnl=fil.reduce((s,b)=>s+calcPnL(b),0);
-  const wr=(wins+losses)>0?Math.round(wins/(wins+losses)*100):0;
-
-  const wrCol=wr>=55?'green':wr>=45?'amber':'red';
-  const wrCard=wr>=55?'c-green':wr>=45?'c-amber':'c-red';
-  const pnlCol=pnl>=0?'green':'red';
-  const pnlCard=pnl>=0?'c-green':'c-red';
+  const fil = activeFilter==='All'?pending:pending.filter(b=>b.capper===activeFilter);
+  const atRisk = fil.reduce((s,b)=>s+(parseFloat(b.wager)||0),0);
+  const cappersInPlay = [...new Set(fil.map(b=>b.capper))].length;
 
   document.getElementById('statsRow').innerHTML = `
-    <div class="stat-card c-neon"><div class="stat-v neon">${fil.length}</div><div class="stat-l">Total</div></div>
-    <div class="stat-card ${wrCard}"><div class="stat-v ${wrCol}">${wr}%</div><div class="stat-l">Win Rate</div></div>
-    <div class="stat-card ${pnlCard}"><div class="stat-v ${pnlCol}">${pnl>=0?'+':'-'}$${Math.abs(pnl).toFixed(0)}</div><div class="stat-l">P&amp;L</div></div>`;
+    <div class="stat-card c-neon"><div class="stat-v neon">${fil.length}</div><div class="stat-l">Open</div></div>
+    <div class="stat-card c-amber"><div class="stat-v amber">$${atRisk.toFixed(0)}</div><div class="stat-l">At Risk</div></div>
+    <div class="stat-card c-green"><div class="stat-v green">${cappersInPlay}</div><div class="stat-l">Cappers</div></div>`;
 
   const list = document.getElementById('betsList');
   if (!fil.length) {
-    list.innerHTML=`<div class="empty"><div class="empty-icon">🎯</div><p>No bets logged yet<br>Log your first bet above</p></div>`;
+    list.innerHTML=`<div class="empty"><div class="empty-icon">🎯</div><p>No open bets<br>Log your first bet above</p></div>`;
     return;
   }
 
   list.innerHTML = fil.map(b=>{
-    const p=calcPnL(b);
-    const cl=b.outcome==='Win'?'win-card':b.outcome==='Loss'?'loss-card':'pend-card';
-    const bdg=b.outcome==='Win'?'win':b.outcome==='Loss'?'loss':'pending';
-    const icon=b.outcome==='Win'?'✅':b.outcome==='Loss'?'❌':'⏳';
     const date=b.logged_at?new Date(b.logged_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'';
-    const isPending=b.outcome==='Pending';
-    return `<div class="bet-card ${cl}">
+    return `<div class="bet-card pend-card">
       <div class="bet-top">
         <div class="bet-capper">${b.capper}</div>
-        <div class="badge ${bdg}">${icon} ${b.outcome}</div>
+        <div class="badge pending">⏳ Open</div>
       </div>
       <div class="bet-pick">${b.pick||'Bet'}</div>
       <div class="bet-meta">
@@ -563,12 +582,12 @@ function renderBets() {
         ${b.odds?`<span class="odds-val">${b.odds}</span>`:''}
         ${b.wager?`<span class="wager-val">$${b.wager}</span>`:''}
         ${b.bet_type?`<span>${b.bet_type}</span>`:''}
+        ${b.book?`<span>${b.book}</span>`:''}
         <span>${date}</span>
       </div>
-      ${!isPending?`<div class="bet-pnl ${p>=0?'up':'down'}">${p>=0?'+':'-'}$${Math.abs(p).toFixed(2)}</div>`:''}
       <div class="bet-update">
-        ${isPending?`<button class="upd-btn u-win" onclick="updateOutcome(${b.id},'Win')">✅ Won</button>`:''}
-        ${isPending?`<button class="upd-btn u-loss" onclick="updateOutcome(${b.id},'Loss')">❌ Lost</button>`:''}
+        <button class="upd-btn u-win" onclick="updateOutcome(${b.id},'Win')">✅ Won</button>
+        <button class="upd-btn u-loss" onclick="updateOutcome(${b.id},'Loss')">❌ Lost</button>
         <button class="upd-btn u-del" onclick="deleteBet(${b.id})">🗑 Delete</button>
       </div>
     </div>`;
@@ -577,7 +596,25 @@ function renderBets() {
 
 function setFilter(f) { activeFilter=f; renderBets(); }
 
+/* Week helpers */
+function getWeekStart(dateStr) {
+  const d = new Date(dateStr);
+  const day = d.getDay();
+  const diff = (day === 0 ? -6 : 1) - day; // Monday start
+  const monday = new Date(d);
+  monday.setDate(d.getDate() + diff);
+  monday.setHours(0,0,0,0);
+  return monday;
+}
+function weekLabel(monday) {
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate()+6);
+  const fmt = (dt) => dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  return `${fmt(monday)} – ${fmt(sunday)}`;
+}
+
 function renderCappers() {
+  const settled = bets.filter(b=>b.outcome==='Win'||b.outcome==='Loss');
   const map={};
   bets.forEach(b=>{ if (!map[b.capper]) map[b.capper]=[]; map[b.capper].push(b); });
   const list=document.getElementById('cappersList');
@@ -587,16 +624,66 @@ function renderCappers() {
   }
   const sorted=Object.entries(map).sort((a,b)=>
     b[1].reduce((s,x)=>s+calcPnL(x),0)-a[1].reduce((s,x)=>s+calcPnL(x),0));
+
   list.innerHTML=sorted.map(([name,cbets],idx)=>{
     const wins=cbets.filter(b=>b.outcome==='Win').length;
     const losses=cbets.filter(b=>b.outcome==='Loss').length;
     const pnl=cbets.reduce((s,b)=>s+calcPnL(b),0);
     const wr=(wins+losses)>0?Math.round(wins/(wins+losses)*100):0;
-    const wagered=cbets.reduce((s,b)=>s+(parseFloat(b.wager)||0),0);
+    const wagered=cbets.filter(b=>b.outcome!=='Pending').reduce((s,b)=>s+(parseFloat(b.wager)||0),0);
     const roi=wagered>0?Math.round(pnl/wagered*100):0;
     const wrC=wr>=55?'var(--green)':wr>=45?'var(--amber)':'var(--red)';
     const pnlC=pnl>=0?'var(--green)':'var(--red)';
     const roiC=roi>=0?'var(--green)':'var(--red)';
+
+    // group this capper's settled bets by week
+    const capperSettled = cbets.filter(b=>b.outcome==='Win'||b.outcome==='Loss');
+    const weekMap = {};
+    capperSettled.forEach(b=>{
+      const monday = getWeekStart(b.logged_at);
+      const key = monday.getTime();
+      if (!weekMap[key]) weekMap[key] = { monday, wins: [], losses: [] };
+      if (b.outcome==='Win') weekMap[key].wins.push(b);
+      else weekMap[key].losses.push(b);
+    });
+    const weeks = Object.values(weekMap).sort((a,b)=>b.monday-a.monday);
+
+    const weekSections = weeks.map(w => {
+      const winRows = w.wins.length
+        ? w.wins.map(b=>{
+            const p=calcPnL(b);
+            return `<div class="wl-row">
+              <div class="wl-pick">${b.pick||'Bet'}</div>
+              <div class="wl-meta"><span>${b.odds||'—'}</span><span class="wl-pnl up">+$${Math.abs(p).toFixed(2)}</span></div>
+            </div>`;
+          }).join('')
+        : `<div class="wl-empty">No wins</div>`;
+
+      const lossRows = w.losses.length
+        ? w.losses.map(b=>{
+            const p=calcPnL(b);
+            return `<div class="wl-row">
+              <div class="wl-pick">${b.pick||'Bet'}</div>
+              <div class="wl-meta"><span>${b.odds||'—'}</span><span class="wl-pnl down">-$${Math.abs(p).toFixed(2)}</span></div>
+            </div>`;
+          }).join('')
+        : `<div class="wl-empty">No losses</div>`;
+
+      return `<div class="week-section">
+        <div class="week-label">${weekLabel(w.monday)}</div>
+        <div class="wl-grid">
+          <div>
+            <div class="wl-col-header win">✅ Wins (${w.wins.length})</div>
+            ${winRows}
+          </div>
+          <div>
+            <div class="wl-col-header loss">❌ Losses (${w.losses.length})</div>
+            ${lossRows}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
     return `<div class="capper-card">
       <div class="capper-name">${idx===0?'🏆 ':''}${name}</div>
       <div class="capper-grid">
@@ -605,6 +692,7 @@ function renderCappers() {
         <div class="capper-stat"><div class="cs-val" style="color:${pnlC}">${pnl>=0?'+':'-'}$${Math.abs(pnl).toFixed(0)}</div><div class="cs-lbl">P&amp;L</div></div>
         <div class="capper-stat"><div class="cs-val" style="color:${roiC}">${roi>=0?'+':''}${roi}%</div><div class="cs-lbl">ROI</div></div>
       </div>
+      ${weekSections}
     </div>`;
   }).join('');
 }
@@ -613,11 +701,16 @@ function renderBankroll() {
   const books = Object.keys(STARTING_BANKROLL);
   const list = document.getElementById('bankrollList');
 
-  list.innerHTML = books.map(book => {
+  let totalStarting = 0;
+  let totalCurrent = 0;
+
+  const cards = books.map(book => {
     const bookBets = bets.filter(b => b.book === book);
     const pnl = bookBets.reduce((s,b) => s + calcPnL(b), 0);
     const starting = STARTING_BANKROLL[book];
     const current = starting + pnl;
+    totalStarting += starting;
+    totalCurrent += current;
     const wins = bookBets.filter(b=>b.outcome==='Win').length;
     const losses = bookBets.filter(b=>b.outcome==='Loss').length;
     const pending = bookBets.filter(b=>b.outcome==='Pending').length;
@@ -636,6 +729,18 @@ function renderBankroll() {
       </div>` : ''}
     </div>`;
   }).join('');
+
+  const totalPnL = totalCurrent - totalStarting;
+  const totalCard = `<div class="total-bankroll-card">
+    <div class="total-bankroll-label">Total Bankroll</div>
+    <div class="total-bankroll-val">$${totalCurrent.toFixed(2)}</div>
+    <div class="bet-meta" style="justify-content:center; margin-top:8px;">
+      <span>Started: $${totalStarting.toFixed(2)}</span>
+      <span class="${totalPnL>=0?'wl-pnl up':'wl-pnl down'}">${totalPnL>=0?'+':'-'}$${Math.abs(totalPnL).toFixed(2)}</span>
+    </div>
+  </div>`;
+
+  list.innerHTML = totalCard + cards;
 }
 
 function exportCSV() {
