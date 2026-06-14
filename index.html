@@ -129,7 +129,7 @@ body {
 .log-btn:disabled { opacity: 0.3; cursor: not-allowed; box-shadow: none; }
 
 /* STATS */
-.stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+.stats-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
 .stat-card {
   background: var(--card); border: 1px solid var(--border);
   border-radius: 10px; padding: 14px 8px; text-align: center;
@@ -208,6 +208,14 @@ body {
 .capper-stat { text-align: center; }
 .cs-val { font-family: 'Oswald', sans-serif; font-size: 17px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
 .cs-lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; font-family: 'Oswald', sans-serif; }
+
+.capper-grid-secondary {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);
+}
+.capper-stat-sm { text-align: center; }
+.css-val { font-family: 'Roboto Mono', monospace; font-size: 13px; font-weight: 600; line-height: 1.3; margin-bottom: 3px; color: var(--text); letter-spacing: 1px; }
+.css-lbl { font-size: 8px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; font-family: 'Oswald', sans-serif; }
 
 /* WEEKLY WIN/LOSS COLUMNS */
 .week-section { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
@@ -543,6 +551,14 @@ function calcToWin(bet) {
   return parseFloat((w*100/Math.abs(o)).toFixed(2));
 }
 
+// Break-even win % needed at given American odds
+function calcBreakeven(odds) {
+  const o = parseInt(odds)||0;
+  if (!o) return null;
+  if (o > 0) return 100/(o+100)*100;
+  return Math.abs(o)/(Math.abs(o)+100)*100;
+}
+
 function updateOutcome(id, newOutcome) {
   const bet = bets.find(b=>b.id===id); if (!bet) return;
   bet.outcome = newOutcome;
@@ -565,12 +581,14 @@ function renderBets() {
 
   const fil = activeFilter==='All'?pending:pending.filter(b=>b.capper===activeFilter);
   const atRisk = fil.reduce((s,b)=>s+(parseFloat(b.wager)||0),0);
+  const toWinTotal = fil.reduce((s,b)=>s+(calcToWin(b)||0),0);
   const cappersInPlay = [...new Set(fil.map(b=>b.capper))].length;
 
   document.getElementById('statsRow').innerHTML = `
     <div class="stat-card c-neon"><div class="stat-v neon">${fil.length}</div><div class="stat-l">Open</div></div>
     <div class="stat-card c-amber"><div class="stat-v amber">$${atRisk.toFixed(0)}</div><div class="stat-l">At Risk</div></div>
-    <div class="stat-card c-green"><div class="stat-v green">${cappersInPlay}</div><div class="stat-l">Cappers</div></div>`;
+    <div class="stat-card c-green"><div class="stat-v green">+$${toWinTotal.toFixed(0)}</div><div class="stat-l">To Win</div></div>
+    <div class="stat-card c-neon"><div class="stat-v neon">${cappersInPlay}</div><div class="stat-l">Cappers</div></div>`;
 
   const list = document.getElementById('betsList');
   if (!fil.length) {
@@ -657,6 +675,23 @@ function renderCappers() {
 
     // group this capper's settled bets by week
     const capperSettled = cbets.filter(b=>b.outcome==='Win'||b.outcome==='Loss');
+
+    // Edge: actual win% vs avg break-even win% needed at their odds
+    const oddsBets = capperSettled.filter(b=>b.odds && parseInt(b.odds));
+    const avgBE = oddsBets.length ? oddsBets.reduce((s,b)=>s+calcBreakeven(b.odds),0)/oddsBets.length : null;
+    const edge = avgBE!==null ? (wr - avgBE) : null;
+    const edgeStr = edge!==null ? `${edge>=0?'+':''}${edge.toFixed(1)}%` : '—';
+    const edgeC = edge===null ? 'var(--muted)' : edge>=0 ? 'var(--green)' : 'var(--red)';
+
+    // Avg odds
+    const avgOdds = oddsBets.length ? Math.round(oddsBets.reduce((s,b)=>s+parseInt(b.odds),0)/oddsBets.length) : null;
+    const avgOddsStr = avgOdds!==null ? (avgOdds>=0?'+'+avgOdds:String(avgOdds)) : '—';
+
+    // Last 5 (oldest to newest)
+    const recentSorted = [...capperSettled].sort((a,b)=>new Date(a.logged_at)-new Date(b.logged_at));
+    const last5 = recentSorted.slice(-5);
+    const last5Str = last5.length ? last5.map(b=>b.outcome==='Win'?'✅':'❌').join('') : '—';
+
     const weekMap = {};
     capperSettled.forEach(b=>{
       const monday = getWeekStart(b.logged_at);
@@ -721,6 +756,11 @@ function renderCappers() {
         <div class="capper-stat"><div class="cs-val" style="color:${wrC}">${wr}%</div><div class="cs-lbl">Win %</div></div>
         <div class="capper-stat"><div class="cs-val" style="color:${pnlC}">${pnl>=0?'+':'-'}$${Math.abs(pnl).toFixed(0)}</div><div class="cs-lbl">P&amp;L</div></div>
         <div class="capper-stat"><div class="cs-val" style="color:${roiC}">${roi>=0?'+':''}${roi}%</div><div class="cs-lbl">ROI</div></div>
+      </div>
+      <div class="capper-grid-secondary">
+        <div class="capper-stat-sm"><div class="css-val" style="color:${edgeC}">${edgeStr}</div><div class="css-lbl">Edge</div></div>
+        <div class="capper-stat-sm"><div class="css-val">${avgOddsStr}</div><div class="css-lbl">Avg Odds</div></div>
+        <div class="capper-stat-sm"><div class="css-val">${last5Str}</div><div class="css-lbl">Last 5</div></div>
       </div>
       ${weekSections}
     </div>`;
