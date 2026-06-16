@@ -205,6 +205,9 @@ body {
 }
 .capper-name { font-family: 'Oswald', sans-serif; font-size: 18px; font-weight: 700; color: var(--text); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 14px; }
 .capper-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.capper-grid-5 { grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.capper-grid-5 .cs-val { font-size: 14px; }
+.capper-grid-5 .cs-lbl { font-size: 8px; letter-spacing: 0.5px; }
 .capper-stat { text-align: center; }
 .cs-val { font-family: 'Oswald', sans-serif; font-size: 17px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
 .cs-lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; font-family: 'Oswald', sans-serif; }
@@ -708,7 +711,7 @@ function renderCappers() {
             const p=calcPnL(b);
             return `<div class="wl-row">
               <div class="wl-pick">${b.pick||'Bet'}</div>
-              <div class="wl-meta"><span>${b.odds||'—'}</span><span class="wl-pnl up">+$${Math.abs(p).toFixed(2)}</span></div>
+              <div class="wl-meta"><span>${b.odds||'—'} · $${b.wager||'0'} risked</span><span class="wl-pnl up">+$${Math.abs(p).toFixed(2)}</span></div>
             </div>`;
           }).join('')
         : `<div class="wl-empty">No wins</div>`;
@@ -718,7 +721,7 @@ function renderCappers() {
             const p=calcPnL(b);
             return `<div class="wl-row">
               <div class="wl-pick">${b.pick||'Bet'}</div>
-              <div class="wl-meta"><span>${b.odds||'—'}</span><span class="wl-pnl down">-$${Math.abs(p).toFixed(2)}</span></div>
+              <div class="wl-meta"><span>${b.odds||'—'} · $${b.wager||'0'} risked</span><span class="wl-pnl down">-$${Math.abs(p).toFixed(2)}</span></div>
             </div>`;
           }).join('')
         : `<div class="wl-empty">No losses</div>`;
@@ -751,9 +754,10 @@ function renderCappers() {
 
     return `<div class="capper-card">
       <div class="capper-name">${idx===0?'🏆 ':''}${name}</div>
-      <div class="capper-grid">
+      <div class="capper-grid capper-grid-5">
         <div class="capper-stat"><div class="cs-val" style="color:var(--neon)">${cbets.length}</div><div class="cs-lbl">Bets</div></div>
         <div class="capper-stat"><div class="cs-val" style="color:${wrC}">${wr}%</div><div class="cs-lbl">Win %</div></div>
+        <div class="capper-stat"><div class="cs-val" style="color:var(--muted)">$${wagered.toFixed(0)}</div><div class="cs-lbl">Risked</div></div>
         <div class="capper-stat"><div class="cs-val" style="color:${pnlC}">${pnl>=0?'+':'-'}$${Math.abs(pnl).toFixed(0)}</div><div class="cs-lbl">P&amp;L</div></div>
         <div class="capper-stat"><div class="cs-val" style="color:${roiC}">${roi>=0?'+':''}${roi}%</div><div class="cs-lbl">ROI</div></div>
       </div>
