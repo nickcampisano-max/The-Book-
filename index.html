@@ -59,13 +59,15 @@ body {
 .ticker-item .t-minus { color: var(--red); }
 @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 
-.tabs { display: flex; background: var(--black); border-bottom: 1px solid var(--border); }
+.tabs { display: flex; background: var(--black); border-bottom: 1px solid var(--border); overflow-x: auto; -ms-overflow-style: none; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
 .tab {
-  flex: 1; padding: 12px 4px;
-  font-family: 'Oswald', sans-serif; font-size: 12px; font-weight: 600;
-  letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
+  flex: 1; padding: 12px 2px; min-width: 64px;
+  font-family: 'Oswald', sans-serif; font-size: 10.5px; font-weight: 600;
+  letter-spacing: 0.5px; text-transform: uppercase; cursor: pointer;
   border: none; background: transparent; color: var(--muted);
   border-bottom: 2px solid transparent; transition: all 0.15s;
+  white-space: nowrap;
 }
 .tab.active { color: var(--neon); border-bottom-color: var(--neon); text-shadow: 0 0 12px var(--neon-glow); }
 
@@ -280,6 +282,58 @@ body {
 .empty { text-align: center; padding: 48px 20px; color: var(--muted); }
 .empty-icon { font-size: 44px; margin-bottom: 14px; opacity: 0.5; }
 .empty p { font-family: 'Oswald', sans-serif; font-size: 14px; letter-spacing: 1px; line-height: 1.8; text-transform: uppercase; }
+
+/* CALENDAR */
+.cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.cal-nav {
+  background: var(--card); border: 1px solid var(--border2); color: var(--neon);
+  width: 36px; height: 36px; border-radius: 8px; font-size: 18px; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.cal-month-label {
+  font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 700;
+  letter-spacing: 1.5px; text-transform: uppercase; color: var(--text);
+}
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 14px; }
+.cal-dow {
+  text-align: center; font-family: 'Oswald', sans-serif; font-size: 10px;
+  color: var(--muted); text-transform: uppercase; letter-spacing: 1px; padding-bottom: 6px;
+}
+.cal-cell {
+  aspect-ratio: 1; border-radius: 8px; background: var(--card); border: 1px solid var(--border);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: relative; cursor: default; transition: all 0.15s;
+}
+.cal-cell.empty { background: transparent; border: none; }
+.cal-cell.has-win, .cal-cell.has-loss { cursor: pointer; }
+.cal-cell.has-win  { background: #001a0e; border-color: #00e87a55; }
+.cal-cell.has-loss { background: #1a000a; border-color: #ff3d5a55; }
+.cal-cell.is-today { border-color: var(--amber); box-shadow: 0 0 8px rgba(255,183,0,0.3); }
+.cal-cell.is-selected { border-color: var(--neon); box-shadow: 0 0 10px var(--neon-glow); transform: scale(1.05); }
+.cal-daynum { font-family: 'Roboto Mono', monospace; font-size: 11px; color: var(--muted); }
+.cal-daypnl { font-family: 'Roboto Mono', monospace; font-size: 10px; font-weight: 700; margin-top: 2px; }
+.cal-daypnl.up   { color: var(--green); }
+.cal-daypnl.down { color: var(--red); }
+.cal-day-detail {
+  display: none; background: #080814; border: 1px solid var(--neon-dim);
+  border-radius: 12px; padding: 16px; margin-bottom: 14px; text-align: center;
+  box-shadow: 0 0 16px rgba(240,21,138,0.1);
+}
+.cdd-date { font-family: 'Oswald', sans-serif; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.cdd-pnl { font-family: 'Oswald', sans-serif; font-size: 28px; font-weight: 700; margin-bottom: 6px; }
+.cdd-pnl.up   { color: var(--green); text-shadow: 0 0 10px #00e87a55; }
+.cdd-pnl.down { color: var(--red);   text-shadow: 0 0 10px #ff3d5a55; }
+.cdd-record { font-family: 'Roboto Mono', monospace; font-size: 12px; color: var(--muted); }
+.cal-summary-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cal-summary-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px; text-align: center;
+}
+.cal-summary-label { font-family: 'Oswald', sans-serif; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; }
+.cal-summary-val { font-family: 'Oswald', sans-serif; font-size: 20px; font-weight: 700; }
+.cal-summary-val.up   { color: var(--green); text-shadow: 0 0 8px #00e87a55; }
+.cal-summary-val.down { color: var(--red);   text-shadow: 0 0 8px #ff3d5a55; }
+
 .toast {
   position: fixed; bottom: 24px; left: 50%;
   transform: translateX(-50%) translateY(80px);
@@ -308,6 +362,7 @@ body {
   <button class="tab" onclick="switchTab('bets')">Bets</button>
   <button class="tab" onclick="switchTab('cappers')">Cappers</button>
   <button class="tab" onclick="switchTab('bankroll')">Bankroll</button>
+  <button class="tab" onclick="switchTab('calendar')">Calendar</button>
 </div>
 
 <!-- ADD TAB -->
@@ -407,6 +462,27 @@ body {
   <div id="bankrollList"></div>
 </div>
 
+<!-- CALENDAR TAB -->
+<div id="tab-calendar" class="content" style="display:none">
+  <div class="cal-header">
+    <button class="cal-nav" onclick="calShiftMonth(-1)">‹</button>
+    <div class="cal-month-label" id="calMonthLabel"></div>
+    <button class="cal-nav" onclick="calShiftMonth(1)">›</button>
+  </div>
+  <div class="cal-grid" id="calGrid"></div>
+  <div class="cal-day-detail" id="calDayDetail"></div>
+  <div class="cal-summary-row">
+    <div class="cal-summary-card">
+      <div class="cal-summary-label">This Week</div>
+      <div class="cal-summary-val" id="calWeekVal">$0.00</div>
+    </div>
+    <div class="cal-summary-card">
+      <div class="cal-summary-label">This Month</div>
+      <div class="cal-summary-val" id="calMonthVal">$0.00</div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -415,6 +491,8 @@ const STARTING_BANKROLL = { 'FanDuel': 1053.03, 'MGM': 270.48, 'DraftKings': 0, 
 let bets = [];
 let outcome = 'Pending';
 let activeFilter = 'All';
+let calViewDate = new Date();
+let selectedCalDay = null;
 
 function save() { try { localStorage.setItem(SK, JSON.stringify(bets)); } catch(e) {} }
 function load() { try { const d = localStorage.getItem(SK); if (d) bets = JSON.parse(d); } catch(e) { bets=[]; } }
@@ -433,15 +511,16 @@ function buildTicker() {
 }
 
 function switchTab(t) {
-  ['add','bets','cappers','bankroll'].forEach(k => {
+  ['add','bets','cappers','bankroll','calendar'].forEach(k => {
     document.getElementById('tab-'+k).style.display = k===t?'block':'none';
   });
   document.querySelectorAll('.tab').forEach((el,i) => {
-    el.classList.toggle('active', ['add','bets','cappers','bankroll'][i]===t);
+    el.classList.toggle('active', ['add','bets','cappers','bankroll','calendar'][i]===t);
   });
   if (t==='bets') renderBets();
   if (t==='cappers') renderCappers();
   if (t==='bankroll') renderBankroll();
+  if (t==='calendar') renderCalendar();
 }
 
 function getCapperValue() {
@@ -815,6 +894,115 @@ function renderBankroll() {
   </div>`;
 
   list.innerHTML = totalCard + cards;
+}
+
+/* CALENDAR */
+function dayKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function getDailyPnLMap() {
+  const map = {};
+  bets.filter(b=>b.outcome==='Win'||b.outcome==='Loss').forEach(b=>{
+    const d = new Date(b.logged_at);
+    const key = dayKey(d);
+    if (!map[key]) map[key] = { pnl: 0, bets: [] };
+    map[key].pnl += calcPnL(b);
+    map[key].bets.push(b);
+  });
+  return map;
+}
+
+function calShiftMonth(dir) {
+  calViewDate = new Date(calViewDate.getFullYear(), calViewDate.getMonth()+dir, 1);
+  selectedCalDay = null;
+  renderCalendar();
+}
+
+function calSelectDay(key) {
+  selectedCalDay = selectedCalDay === key ? null : key;
+  renderCalendar();
+}
+
+function renderCalendar() {
+  const dailyMap = getDailyPnLMap();
+  const year = calViewDate.getFullYear();
+  const month = calViewDate.getMonth();
+
+  document.getElementById('calMonthLabel').textContent =
+    calViewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  const firstOfMonth = new Date(year, month, 1);
+  const startOffset = (firstOfMonth.getDay() === 0) ? 6 : firstOfMonth.getDay() - 1; // Monday start
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+
+  const dayLabels = ['M','T','W','T','F','S','S'];
+  let html = dayLabels.map(l=>`<div class="cal-dow">${l}</div>`).join('');
+
+  for (let i=0; i<startOffset; i++) html += `<div class="cal-cell empty"></div>`;
+
+  const today = new Date();
+  const isToday = (d) => d.getFullYear()===today.getFullYear() && d.getMonth()===today.getMonth() && d.getDate()===today.getDate();
+
+  for (let day=1; day<=daysInMonth; day++) {
+    const d = new Date(year, month, day);
+    const key = dayKey(d);
+    const data = dailyMap[key];
+    let cls = 'cal-cell';
+    if (isToday(d)) cls += ' is-today';
+    if (selectedCalDay === key) cls += ' is-selected';
+    if (data) cls += data.pnl >= 0 ? ' has-win' : ' has-loss';
+
+    html += `<div class="${cls}" onclick="${data?`calSelectDay('${key}')`:''}">
+      <div class="cal-daynum">${day}</div>
+      ${data ? `<div class="cal-daypnl ${data.pnl>=0?'up':'down'}">${data.pnl>=0?'+':''}${Math.abs(data.pnl)>=100?Math.round(data.pnl):data.pnl.toFixed(0)}</div>` : ''}
+    </div>`;
+  }
+
+  document.getElementById('calGrid').innerHTML = html;
+
+  // day detail panel
+  const detailEl = document.getElementById('calDayDetail');
+  if (selectedCalDay && dailyMap[selectedCalDay]) {
+    const data = dailyMap[selectedCalDay];
+    const dateObj = new Date(selectedCalDay+'T00:00:00');
+    const dateLabel = dateObj.toLocaleDateString('en-US',{weekday:'long', month:'long', day:'numeric'});
+    const wins = data.bets.filter(b=>b.outcome==='Win').length;
+    const losses = data.bets.filter(b=>b.outcome==='Loss').length;
+    detailEl.style.display = 'block';
+    detailEl.innerHTML = `
+      <div class="cdd-date">${dateLabel}</div>
+      <div class="cdd-pnl ${data.pnl>=0?'up':'down'}">${data.pnl>=0?'+':'-'}$${Math.abs(data.pnl).toFixed(2)}</div>
+      <div class="cdd-record">${wins}W - ${losses}L · ${data.bets.length} bet${data.bets.length!==1?'s':''}</div>
+    `;
+  } else {
+    detailEl.style.display = 'none';
+    detailEl.innerHTML = '';
+  }
+
+  // week total (Mon-Sun containing today, using real "now", not the viewed month)
+  const weekStart = getWeekStart(new Date().toISOString());
+  let weekTotal = 0;
+  Object.keys(dailyMap).forEach(key=>{
+    const d = new Date(key+'T00:00:00');
+    if (d >= weekStart) {
+      const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate()+6); weekEnd.setHours(23,59,59,999);
+      if (d <= weekEnd) weekTotal += dailyMap[key].pnl;
+    }
+  });
+  const weekEl = document.getElementById('calWeekVal');
+  weekEl.textContent = `${weekTotal>=0?'+':'-'}$${Math.abs(weekTotal).toFixed(2)}`;
+  weekEl.className = 'cal-summary-val '+(weekTotal>=0?'up':'down');
+
+  // month total (for the viewed month)
+  let monthTotal = 0;
+  Object.keys(dailyMap).forEach(key=>{
+    const d = new Date(key+'T00:00:00');
+    if (d.getFullYear()===year && d.getMonth()===month) monthTotal += dailyMap[key].pnl;
+  });
+  const monthEl = document.getElementById('calMonthVal');
+  monthEl.textContent = `${monthTotal>=0?'+':'-'}$${Math.abs(monthTotal).toFixed(2)}`;
+  monthEl.className = 'cal-summary-val '+(monthTotal>=0?'up':'down');
 }
 
 function exportCSV() {
