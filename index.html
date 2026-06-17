@@ -474,7 +474,7 @@ body {
   <div class="cal-day-detail" id="calDayDetail"></div>
   <div class="cal-summary-row">
     <div class="cal-summary-card">
-      <div class="cal-summary-label">This Week</div>
+      <div class="cal-summary-label" id="calWeekLabel">This Week</div>
       <div class="cal-summary-val" id="calWeekVal">$0.00</div>
     </div>
     <div class="cal-summary-card">
@@ -981,19 +981,41 @@ function renderCalendar() {
     detailEl.innerHTML = '';
   }
 
-  // week total (Mon-Sun containing today, using real "now", not the viewed month)
-  const weekStart = getWeekStart(new Date().toISOString());
-  let weekTotal = 0;
-  Object.keys(dailyMap).forEach(key=>{
-    const d = new Date(key+'T00:00:00');
-    if (d >= weekStart) {
-      const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate()+6); weekEnd.setHours(23,59,59,999);
-      if (d <= weekEnd) weekTotal += dailyMap[key].pnl;
-    }
-  });
+  // week total — only meaningful when viewing the actual current month
+  const realToday = new Date();
+  const viewingCurrentMonth = (year === realToday.getFullYear() && month === realToday.getMonth());
+  const weekLabelEl = document.getElementById('calWeekLabel');
   const weekEl = document.getElementById('calWeekVal');
-  weekEl.textContent = `${weekTotal>=0?'+':'-'}$${Math.abs(weekTotal).toFixed(2)}`;
-  weekEl.className = 'cal-summary-val '+(weekTotal>=0?'up':'down');
+
+  if (viewingCurrentMonth) {
+    const weekStart = getWeekStart(realToday.toISOString());
+    let weekTotal = 0;
+    Object.keys(dailyMap).forEach(key=>{
+      const d = new Date(key+'T00:00:00');
+      if (d >= weekStart) {
+        const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate()+6); weekEnd.setHours(23,59,59,999);
+        if (d <= weekEnd) weekTotal += dailyMap[key].pnl;
+      }
+    });
+    weekLabelEl.textContent = 'This Week';
+    weekEl.textContent = `${weekTotal>=0?'+':'-'}$${Math.abs(weekTotal).toFixed(2)}`;
+    weekEl.className = 'cal-summary-val '+(weekTotal>=0?'up':'down');
+  } else {
+    // viewing a past/future month — show that month's best week instead of a misleading "this week"
+    const weeksInView = {};
+    Object.keys(dailyMap).forEach(key=>{
+      const d = new Date(key+'T00:00:00');
+      if (d.getFullYear()===year && d.getMonth()===month) {
+        const wk = getWeekStart(d.toISOString()).getTime();
+        weeksInView[wk] = (weeksInView[wk]||0) + dailyMap[key].pnl;
+      }
+    });
+    const vals = Object.values(weeksInView);
+    const bestWeek = vals.length ? Math.max(...vals) : 0;
+    weekLabelEl.textContent = 'Best Week';
+    weekEl.textContent = `${bestWeek>=0?'+':'-'}$${Math.abs(bestWeek).toFixed(2)}`;
+    weekEl.className = 'cal-summary-val '+(bestWeek>=0?'up':'down');
+  }
 
   // month total (for the viewed month)
   let monthTotal = 0;
