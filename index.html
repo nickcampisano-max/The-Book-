@@ -259,6 +259,12 @@ body {
 .wl-meta { display: flex; justify-content: space-between; font-family: 'Roboto Mono', monospace; font-size: 10px; color: var(--muted); }
 .wl-pnl.up   { color: var(--green); font-weight: 600; }
 .wl-pnl.down { color: var(--red);   font-weight: 600; }
+.wl-undo {
+  background: none; border: none; color: var(--muted); font-size: 9px;
+  font-family: 'Oswald', sans-serif; letter-spacing: 0.5px; text-transform: uppercase;
+  cursor: pointer; padding: 3px 0 0; text-decoration: underline; opacity: 0.7;
+}
+.wl-undo:hover { color: var(--neon); opacity: 1; }
 .wl-empty { color: var(--muted); font-size: 10px; text-align: center; padding: 10px 0; font-family: 'Oswald', sans-serif; letter-spacing: 1px; text-transform: uppercase; }
 .total-bankroll-card {
   background: linear-gradient(135deg, #1a0a1a, #0f0f1a);
@@ -653,9 +659,13 @@ function calcBreakeven(odds) {
 
 function updateOutcome(id, newOutcome) {
   const bet = bets.find(b=>b.id===id); if (!bet) return;
+  if (newOutcome !== 'Pending') {
+    const ok = confirm(`Mark "${bet.pick||'this bet'}" as ${newOutcome}?`);
+    if (!ok) return;
+  }
   bet.outcome = newOutcome;
-  save(); buildTicker(); renderBets();
-  showToast(newOutcome==='Win'?'Marked Won ✓':'Marked Lost');
+  save(); buildTicker(); renderBets(); renderCappers();
+  showToast(newOutcome==='Win'?'Marked Won ✓':newOutcome==='Loss'?'Marked Lost':'Moved Back to Pending');
 }
 
 function deleteBet(id) {
@@ -810,6 +820,7 @@ function renderCappers() {
             return `<div class="wl-row">
               <div class="wl-pick">${b.pick||'Bet'}</div>
               <div class="wl-meta"><span>${b.odds||'—'} · $${b.wager||'0'} risked</span><span class="wl-pnl up">+$${Math.abs(p).toFixed(2)}</span></div>
+              <button class="wl-undo" onclick="updateOutcome(${b.id},'Pending')">↩ Undo</button>
             </div>`;
           }).join('')
         : `<div class="wl-empty">No wins</div>`;
@@ -820,6 +831,7 @@ function renderCappers() {
             return `<div class="wl-row">
               <div class="wl-pick">${b.pick||'Bet'}</div>
               <div class="wl-meta"><span>${b.odds||'—'} · $${b.wager||'0'} risked</span><span class="wl-pnl down">-$${Math.abs(p).toFixed(2)}</span></div>
+              <button class="wl-undo" onclick="updateOutcome(${b.id},'Pending')">↩ Undo</button>
             </div>`;
           }).join('')
         : `<div class="wl-empty">No losses</div>`;
