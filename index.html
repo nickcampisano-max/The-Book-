@@ -891,11 +891,16 @@ function renderBankroll() {
   let totalStarting = 0;
   let totalCurrent = 0;
 
-  const cards = books.map(book => {
+  // Pre-calculate current balance per book, then sort highest to lowest
+  const bookData = books.map(book => {
     const bookBets = bets.filter(b => b.book === book);
     const pnl = bookBets.reduce((s,b) => s + calcPnL(b), 0);
     const starting = STARTING_BANKROLL[book];
     const current = starting + pnl;
+    return { book, bookBets, pnl, starting, current };
+  }).sort((a,b) => b.current - a.current);
+
+  const cards = bookData.map(({book, bookBets, pnl, starting, current}) => {
     totalStarting += starting;
     totalCurrent += current;
     const wins = bookBets.filter(b=>b.outcome==='Win').length;
