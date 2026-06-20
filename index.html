@@ -591,10 +591,10 @@ function logBet() {
     logged_at: new Date().toISOString()
   };
 
-  // remember last-used values for quick re-entry
+  // remember last-used values for quick re-entry (sport/type only — not odds/wager/book)
   try {
     localStorage.setItem('thebook_last', JSON.stringify({
-      odds: bet.odds, sport: bet.sport, bet_type: bet.bet_type, book: bet.book, wager: bet.wager
+      sport: bet.sport, bet_type: bet.bet_type
     }));
   } catch(e) {}
 
@@ -607,11 +607,11 @@ function logBet() {
 function applyDefaults() {
   let last = {};
   try { last = JSON.parse(localStorage.getItem('thebook_last') || '{}'); } catch(e) {}
-  document.getElementById('f_odds').value  = last.odds  || '-110';
-  document.getElementById('f_wager').value = last.wager || '';
+  document.getElementById('f_odds').value  = '';
+  document.getElementById('f_wager').value = '';
+  document.getElementById('f_book').value = '';
   if (last.sport)    document.getElementById('f_sport').value = last.sport;
   if (last.bet_type) document.getElementById('f_type').value  = last.bet_type;
-  if (last.book)     document.getElementById('f_book').value  = last.book;
 }
 
 function clearForm() {
