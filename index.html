@@ -490,7 +490,11 @@ body {
   </div>
   <div class="cal-grid" id="calGrid"></div>
   <div class="cal-day-detail" id="calDayDetail"></div>
-  <div class="cal-summary-row cal-summary-3">
+  <div class="cal-summary-row">
+    <div class="cal-summary-card">
+      <div class="cal-summary-label" id="calDayLabel">Today</div>
+      <div class="cal-summary-val" id="calDayVal">$0.00</div>
+    </div>
     <div class="cal-summary-card">
       <div class="cal-summary-label" id="calWeekLabel">This Week</div>
       <div class="cal-summary-val" id="calWeekVal">$0.00</div>
@@ -1026,59 +1030,54 @@ function renderCalendar() {
     detailEl.innerHTML = '';
   }
 
-  // week total — only meaningful when viewing the actual current month
+  // Determine reference date — use selected day if tapped, otherwise today
   const realToday = new Date();
-  const viewingCurrentMonth = (year === realToday.getFullYear() && month === realToday.getMonth());
+  const referenceDate = selectedCalDay ? new Date(selectedCalDay+'T00:00:00') : realToday;
+
+  // Day card
+  const dayEl = document.getElementById('calDayVal');
+  const dayLabelEl = document.getElementById('calDayLabel');
+  const refKey = selectedCalDay || dayKey(realToday);
+  const dayData = dailyMap[refKey];
+  const dayPnl = dayData ? dayData.pnl : 0;
+  const isRefToday = refKey === dayKey(realToday);
+  dayLabelEl.textContent = isRefToday ? 'Today' : referenceDate.toLocaleDateString('en-US',{month:'short', day:'numeric'});
+  dayEl.textContent = `${dayPnl>=0?'+':'-'}$${Math.abs(dayPnl).toFixed(2)}`;
+  dayEl.className = 'cal-summary-val '+(dayPnl>0?'up':dayPnl<0?'down':'muted');
+
+
   const weekLabelEl = document.getElementById('calWeekLabel');
   const weekEl = document.getElementById('calWeekVal');
   const prevWeekLabelEl = document.getElementById('calPrevWeekLabel');
   const prevWeekEl = document.getElementById('calPrevWeekVal');
 
-  if (viewingCurrentMonth) {
-    const weekStart = getWeekStart(realToday.toISOString());
-    let weekTotal = 0;
-    Object.keys(dailyMap).forEach(key=>{
-      const d = new Date(key+'T00:00:00');
-      if (d >= weekStart) {
-        const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate()+6); weekEnd.setHours(23,59,59,999);
-        if (d <= weekEnd) weekTotal += dailyMap[key].pnl;
-      }
-    });
-    weekLabelEl.textContent = 'This Week';
-    weekEl.textContent = `${weekTotal>=0?'+':'-'}$${Math.abs(weekTotal).toFixed(2)}`;
-    weekEl.className = 'cal-summary-val '+(weekTotal>=0?'up':'down');
+  // Week containing the reference date
+  const weekStart = getWeekStart(referenceDate.toISOString());
+  const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate()+6); weekEnd.setHours(23,59,59,999);
+  let weekTotal = 0;
+  Object.keys(dailyMap).forEach(key=>{
+    const d = new Date(key+'T00:00:00');
+    if (d >= weekStart && d <= weekEnd) weekTotal += dailyMap[key].pnl;
+  });
 
-    // Previous week (Mon-Sun before current week)
-    const prevWeekStart = new Date(weekStart); prevWeekStart.setDate(weekStart.getDate()-7);
-    const prevWeekEnd = new Date(weekStart); prevWeekEnd.setDate(weekStart.getDate()-1); prevWeekEnd.setHours(23,59,59,999);
-    let prevWeekTotal = 0;
-    Object.keys(dailyMap).forEach(key=>{
-      const d = new Date(key+'T00:00:00');
-      if (d >= prevWeekStart && d <= prevWeekEnd) prevWeekTotal += dailyMap[key].pnl;
-    });
-    prevWeekLabelEl.textContent = 'Last Week';
-    prevWeekEl.textContent = `${prevWeekTotal>=0?'+':'-'}$${Math.abs(prevWeekTotal).toFixed(2)}`;
-    prevWeekEl.className = 'cal-summary-val '+(prevWeekTotal>=0?'up':'down');
-  } else {
-    // viewing a past/future month — show best and worst week for that month
-    const weeksInView = {};
-    Object.keys(dailyMap).forEach(key=>{
-      const d = new Date(key+'T00:00:00');
-      if (d.getFullYear()===year && d.getMonth()===month) {
-        const wk = getWeekStart(d.toISOString()).getTime();
-        weeksInView[wk] = (weeksInView[wk]||0) + dailyMap[key].pnl;
-      }
-    });
-    const vals = Object.values(weeksInView);
-    const bestWeek = vals.length ? Math.max(...vals) : 0;
-    const worstWeek = vals.length ? Math.min(...vals) : 0;
-    weekLabelEl.textContent = 'Best Week';
-    weekEl.textContent = `${bestWeek>=0?'+':'-'}$${Math.abs(bestWeek).toFixed(2)}`;
-    weekEl.className = 'cal-summary-val '+(bestWeek>=0?'up':'down');
-    prevWeekLabelEl.textContent = 'Worst Week';
-    prevWeekEl.textContent = `${worstWeek>=0?'+':'-'}$${Math.abs(worstWeek).toFixed(2)}`;
-    prevWeekEl.className = 'cal-summary-val '+(worstWeek>=0?'up':'down');
-  }
+  // Is the reference date in the current real week?
+  const realWeekStart = getWeekStart(realToday.toISOString());
+  const isCurrentWeek = weekStart.getTime() === realWeekStart.getTime();
+  weekLabelEl.textContent = isCurrentWeek ? 'This Week' : weekLabel(weekStart);
+  weekEl.textContent = `${weekTotal>=0?'+':'-'}$${Math.abs(weekTotal).toFixed(2)}`;
+  weekEl.className = 'cal-summary-val '+(weekTotal>=0?'up':'down');
+
+  // Previous week (Mon-Sun before reference week)
+  const prevWeekStart = new Date(weekStart); prevWeekStart.setDate(weekStart.getDate()-7);
+  const prevWeekEnd = new Date(weekStart); prevWeekEnd.setDate(weekStart.getDate()-1); prevWeekEnd.setHours(23,59,59,999);
+  let prevWeekTotal = 0;
+  Object.keys(dailyMap).forEach(key=>{
+    const d = new Date(key+'T00:00:00');
+    if (d >= prevWeekStart && d <= prevWeekEnd) prevWeekTotal += dailyMap[key].pnl;
+  });
+  prevWeekLabelEl.textContent = isCurrentWeek ? 'Last Week' : weekLabel(prevWeekStart);
+  prevWeekEl.textContent = `${prevWeekTotal>=0?'+':'-'}$${Math.abs(prevWeekTotal).toFixed(2)}`;
+  prevWeekEl.className = 'cal-summary-val '+(prevWeekTotal>=0?'up':'down');
 
   // month total (for the viewed month)
   let monthTotal = 0;
