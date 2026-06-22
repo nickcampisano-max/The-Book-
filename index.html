@@ -328,16 +328,6 @@ body {
 .cal-daypnl { font-family: 'Roboto Mono', monospace; font-size: 9px; font-weight: 700; margin-top: 2px; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; padding: 0 2px; }
 .cal-daypnl.up   { color: var(--green); }
 .cal-daypnl.down { color: var(--red); }
-.cal-day-detail {
-  display: none; background: #080814; border: 1px solid var(--neon-dim);
-  border-radius: 12px; padding: 16px; margin-bottom: 14px; text-align: center;
-  box-shadow: 0 0 16px rgba(240,21,138,0.1);
-}
-.cdd-date { font-family: 'Oswald', sans-serif; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
-.cdd-pnl { font-family: 'Oswald', sans-serif; font-size: 28px; font-weight: 700; margin-bottom: 6px; }
-.cdd-pnl.up   { color: var(--green); text-shadow: 0 0 10px #00e87a55; }
-.cdd-pnl.down { color: var(--red);   text-shadow: 0 0 10px #ff3d5a55; }
-.cdd-record { font-family: 'Roboto Mono', monospace; font-size: 12px; color: var(--muted); }
 .cal-summary-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .cal-summary-3 { grid-template-columns: 1fr 1fr 1fr; }
 .cal-summary-3 .cal-summary-val { font-size: 16px; }
@@ -489,7 +479,6 @@ body {
     <button class="cal-nav" onclick="calShiftMonth(1)">›</button>
   </div>
   <div class="cal-grid" id="calGrid"></div>
-  <div class="cal-day-detail" id="calDayDetail"></div>
   <div class="cal-summary-row">
     <div class="cal-summary-card">
       <div class="cal-summary-label" id="calDayLabel">Today</div>
@@ -1010,25 +999,6 @@ function renderCalendar() {
   }
 
   document.getElementById('calGrid').innerHTML = html;
-
-  // day detail panel
-  const detailEl = document.getElementById('calDayDetail');
-  if (selectedCalDay && dailyMap[selectedCalDay]) {
-    const data = dailyMap[selectedCalDay];
-    const dateObj = new Date(selectedCalDay+'T00:00:00');
-    const dateLabel = dateObj.toLocaleDateString('en-US',{weekday:'long', month:'long', day:'numeric'});
-    const wins = data.bets.filter(b=>b.outcome==='Win').length;
-    const losses = data.bets.filter(b=>b.outcome==='Loss').length;
-    detailEl.style.display = 'block';
-    detailEl.innerHTML = `
-      <div class="cdd-date">${dateLabel}</div>
-      <div class="cdd-pnl ${data.pnl>=0?'up':'down'}">${data.pnl>=0?'+':'-'}$${Math.abs(data.pnl).toFixed(2)}</div>
-      <div class="cdd-record">${wins}W - ${losses}L · ${data.bets.length} bet${data.bets.length!==1?'s':''}</div>
-    `;
-  } else {
-    detailEl.style.display = 'none';
-    detailEl.innerHTML = '';
-  }
 
   // Determine reference date — use selected day if tapped, otherwise today
   const realToday = new Date();
