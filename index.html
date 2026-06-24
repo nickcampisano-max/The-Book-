@@ -108,6 +108,63 @@ body {
 }
 .more-toggle:hover, .more-toggle.open { color: var(--neon); border-color: var(--neon-dim); }
 .more-fields { margin-top: 12px; }
+
+/* BONUS TOGGLE */
+.bonus-toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--card); border: 1px solid var(--border2); border-radius: 10px;
+  padding: 12px 14px; margin-bottom: 14px; cursor: pointer; transition: border-color 0.2s;
+}
+.bonus-toggle-row:hover { border-color: var(--amber); }
+.bonus-toggle-label { display: flex; align-items: center; gap: 10px; }
+.bonus-icon { font-size: 18px; }
+.bonus-toggle-label span:nth-child(2) { font-family: 'Oswald', sans-serif; font-size: 14px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text); }
+.bonus-sub { font-size: 10px; color: var(--muted); font-family: 'Inter', sans-serif; text-transform: none; letter-spacing: 0; }
+.bonus-switch {
+  width: 44px; height: 24px; background: var(--border2); border-radius: 12px;
+  position: relative; transition: background 0.2s; flex-shrink: 0;
+}
+.bonus-switch.active { background: var(--amber); }
+.bonus-knob {
+  position: absolute; top: 2px; left: 2px; width: 20px; height: 20px;
+  background: #fff; border-radius: 50%; transition: transform 0.2s;
+}
+.bonus-switch.active .bonus-knob { transform: translateX(20px); }
+
+/* DEPOSIT / WITHDRAWAL */
+.book-actions { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.book-action-btn {
+  flex: 1; padding: 9px; border-radius: 8px; font-family: 'Oswald', sans-serif;
+  font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  cursor: pointer; border: 1.5px solid; transition: all 0.15s;
+}
+.book-action-btn.dep  { color: var(--green); border-color: #00e87a44; background: #001a0e; }
+.book-action-btn.with { color: var(--red);   border-color: #ff3d5a44; background: #1a000a; }
+.tx-history { margin-top: 10px; }
+.tx-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border); font-family: 'Roboto Mono', monospace; font-size: 11px; }
+.tx-row:last-child { border-bottom: none; }
+.tx-type { font-size: 10px; font-family: 'Oswald', sans-serif; text-transform: uppercase; letter-spacing: 0.8px; min-width: 72px; }
+.tx-type.dep  { color: var(--green); }
+.tx-type.with { color: var(--red); }
+.tx-amt { color: var(--text); font-weight: 600; flex: 1; }
+.tx-date { color: var(--muted); font-size: 10px; }
+
+/* TRANSACTION MODAL */
+.tx-modal {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+  display: flex; align-items: center; justify-content: center; z-index: 200; padding: 20px;
+}
+.tx-modal-inner {
+  background: var(--card2); border: 1px solid var(--neon-dim);
+  border-radius: 16px; padding: 24px; width: 100%; max-width: 340px;
+  box-shadow: 0 0 30px rgba(240,21,138,0.2);
+}
+.tx-modal-title {
+  font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 700;
+  color: var(--neon); text-transform: uppercase; letter-spacing: 2px;
+  margin-bottom: 16px; text-align: center;
+}
+
 .out-btn {
   flex: 1; padding: 11px 6px; border-radius: 8px; border: 1.5px solid var(--border2);
   font-family: 'Oswald', sans-serif; font-size: 13px; font-weight: 600;
@@ -447,6 +504,17 @@ body {
     </div>
   </div>
 
+  <div class="bonus-toggle-row" onclick="toggleBonus()">
+    <div class="bonus-toggle-label">
+      <span class="bonus-icon">🎁</span>
+      <span>Bonus Bet</span>
+      <span class="bonus-sub">Stake not counted in P&L</span>
+    </div>
+    <div class="bonus-switch" id="bonusSwitch">
+      <div class="bonus-knob"></div>
+    </div>
+  </div>
+
   <button class="log-btn" id="logBtn" onclick="logBet()" disabled>Lock It In</button>
 </div>
 
@@ -469,6 +537,16 @@ body {
 <div id="tab-bankroll" class="content" style="display:none">
   <div class="section-label">Sportsbook Balances</div>
   <div id="bankrollList"></div>
+  <div id="txModal" class="tx-modal" style="display:none">
+    <div class="tx-modal-inner">
+      <div class="tx-modal-title" id="txModalTitle">Deposit</div>
+      <input type="number" class="field-input" id="txAmount" placeholder="Amount ($)" style="margin-bottom:12px;">
+      <div style="display:flex;gap:8px">
+        <button class="btn-confirm" style="flex:1" onclick="confirmTransaction()">Confirm</button>
+        <button class="btn-redo" style="flex:1" onclick="closeTxModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- CALENDAR TAB -->
@@ -505,13 +583,20 @@ body {
 const SK = 'thebook_v3';
 const STARTING_BANKROLL = { 'FanDuel': 923.41, 'MGM': 270.48, 'DraftKings': 370, 'Polymarket': -269.55 };
 let bets = [];
+let transactions = []; // deposit/withdrawal log
 let outcome = 'Pending';
 let activeFilter = 'All';
 let calViewDate = new Date();
 let selectedCalDay = null;
+let isBonus = false;
+let txPendingBook = null;
+let txPendingType = null;
+const TX_KEY = 'thebook_tx_v1';
 
 function save() { try { localStorage.setItem(SK, JSON.stringify(bets)); } catch(e) {} }
 function load() { try { const d = localStorage.getItem(SK); if (d) bets = JSON.parse(d); } catch(e) { bets=[]; } }
+function saveTx() { try { localStorage.setItem(TX_KEY, JSON.stringify(transactions)); } catch(e) {} }
+function loadTx() { try { const d = localStorage.getItem(TX_KEY); if (d) transactions = JSON.parse(d); } catch(e) { transactions=[]; } }
 
 function buildTicker() {
   const items = bets.length
@@ -587,6 +672,7 @@ function logBet() {
     sport:  document.getElementById('f_sport').value || null,
     bet_type: document.getElementById('f_type').value || null,
     book:   document.getElementById('f_book').value || null,
+    isBonus,
     outcome,
     logged_at: new Date().toISOString()
   };
@@ -620,6 +706,8 @@ function clearForm() {
   document.getElementById('f_capper_other').style.display = 'none';
   document.getElementById('f_pick').value = '';
   document.getElementById('logBtn').disabled = true;
+  isBonus = false;
+  document.getElementById('bonusSwitch').classList.remove('active');
   selectOutcome('Pending');
   applyDefaults();
 }
@@ -637,8 +725,54 @@ function calcPnL(bet) {
     if (o>0) return parseFloat((w*o/100).toFixed(2));
     if (o<0) return parseFloat((w*100/Math.abs(o)).toFixed(2));
   }
-  if (bet.outcome==='Loss') return -w;
+  // Bonus bets: no loss on stake if outcome is Loss
+  if (bet.outcome==='Loss') return bet.isBonus ? 0 : -w;
   return 0;
+}
+
+/* BONUS BET TOGGLE */
+function toggleBonus() {
+  isBonus = !isBonus;
+  const sw = document.getElementById('bonusSwitch');
+  sw.classList.toggle('active', isBonus);
+}
+
+/* DEPOSIT / WITHDRAWAL */
+function openTxModal(book, type) {
+  txPendingBook = book;
+  txPendingType = type;
+  document.getElementById('txModalTitle').textContent = `${type} — ${book}`;
+  document.getElementById('txAmount').value = '';
+  document.getElementById('txModal').style.display = 'flex';
+}
+
+function closeTxModal() {
+  document.getElementById('txModal').style.display = 'none';
+  txPendingBook = null; txPendingType = null;
+}
+
+function confirmTransaction() {
+  const amt = parseFloat(document.getElementById('txAmount').value);
+  if (!amt || amt <= 0) { showToast('Enter a valid amount'); return; }
+  transactions.push({
+    id: Date.now(),
+    book: txPendingBook,
+    type: txPendingType, // 'Deposit' or 'Withdrawal'
+    amount: amt,
+    date: new Date().toISOString()
+  });
+  saveTx();
+  closeTxModal();
+  renderBankroll();
+  showToast(`${txPendingType || ''} logged ✓`);
+}
+
+function getBookBalance(book) {
+  const betPnL = bets.filter(b=>b.book===book).reduce((s,b)=>s+calcPnL(b),0);
+  const deposits = transactions.filter(t=>t.book===book && t.type==='Deposit').reduce((s,t)=>s+t.amount,0);
+  const withdrawals = transactions.filter(t=>t.book===book && t.type==='Withdrawal').reduce((s,t)=>s+t.amount,0);
+  const starting = STARTING_BANKROLL[book]||0;
+  return { current: starting + deposits - withdrawals + betPnL, betPnL, deposits, withdrawals };
 }
 
 function calcToWin(bet) {
@@ -888,48 +1022,55 @@ function renderBankroll() {
   const books = Object.keys(STARTING_BANKROLL);
   const list = document.getElementById('bankrollList');
 
-  let totalStarting = 0;
   let totalCurrent = 0;
 
-  // Pre-calculate current balance per book, then sort highest to lowest
   const bookData = books.map(book => {
+    const { current, betPnL, deposits, withdrawals } = getBookBalance(book);
     const bookBets = bets.filter(b => b.book === book);
-    const pnl = bookBets.reduce((s,b) => s + calcPnL(b), 0);
-    const starting = STARTING_BANKROLL[book];
-    const current = starting + pnl;
-    return { book, bookBets, pnl, starting, current };
+    return { book, bookBets, betPnL, deposits, withdrawals, current };
   }).sort((a,b) => b.current - a.current);
 
-  const cards = bookData.map(({book, bookBets, pnl, starting, current}) => {
-    totalStarting += starting;
+  const cards = bookData.map(({book, bookBets, betPnL, deposits, withdrawals, current}) => {
     totalCurrent += current;
     const wins = bookBets.filter(b=>b.outcome==='Win').length;
     const losses = bookBets.filter(b=>b.outcome==='Loss').length;
     const pending = bookBets.filter(b=>b.outcome==='Pending').length;
-    const pnlC = pnl>=0?'var(--green)':'var(--red)';
+    const pnlC = betPnL>=0?'var(--green)':'var(--red)';
+    const bookTx = transactions.filter(t=>t.book===book);
+
+    // Transaction history
+    const txHistory = bookTx.length ? bookTx.slice(-3).reverse().map(t=>{
+      const date = new Date(t.date).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      const isDeposit = t.type==='Deposit';
+      return `<div class="tx-row">
+        <span class="tx-type ${isDeposit?'dep':'with'}">${isDeposit?'↓ Deposit':'↑ Withdraw'}</span>
+        <span class="tx-amt">${isDeposit?'+':'-'}$${t.amount.toFixed(2)}</span>
+        <span class="tx-date">${date}</span>
+      </div>`;
+    }).join('') : '';
 
     return `<div class="capper-card">
       <div class="capper-name">${book}</div>
       <div class="capper-grid">
-        <div class="capper-stat"><div class="cs-val" style="color:var(--neon)">$${starting.toFixed(2)}</div><div class="cs-lbl">Starting</div></div>
-        <div class="capper-stat"><div class="cs-val" style="color:${pnlC}">${pnl>=0?'+':'-'}$${Math.abs(pnl).toFixed(2)}</div><div class="cs-lbl">P&amp;L</div></div>
+        <div class="capper-stat"><div class="cs-val" style="color:${pnlC}">${betPnL>=0?'+':'-'}$${Math.abs(betPnL).toFixed(2)}</div><div class="cs-lbl">Bet P&amp;L</div></div>
+        <div class="capper-stat"><div class="cs-val" style="color:var(--green)">+$${deposits.toFixed(2)}</div><div class="cs-lbl">Deposited</div></div>
+        <div class="capper-stat"><div class="cs-val" style="color:var(--red)">-$${withdrawals.toFixed(2)}</div><div class="cs-lbl">Withdrawn</div></div>
         <div class="capper-stat"><div class="cs-val" style="color:var(--amber)">$${current.toFixed(2)}</div><div class="cs-lbl">Current</div></div>
-        <div class="capper-stat"><div class="cs-val" style="color:var(--muted)">${bookBets.length}</div><div class="cs-lbl">Bets</div></div>
       </div>
       ${bookBets.length ? `<div class="bet-meta" style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
-        <span>${wins}W</span><span>${losses}L</span><span>${pending} Open</span>
+        <span>${wins}W</span><span>${losses}L</span><span>${pending} Open</span><span>${bookBets.length} Bets</span>
       </div>` : ''}
+      ${txHistory ? `<div class="tx-history">${txHistory}</div>` : ''}
+      <div class="book-actions">
+        <button class="book-action-btn dep" onclick="openTxModal('${book}','Deposit')">+ Deposit</button>
+        <button class="book-action-btn with" onclick="openTxModal('${book}','Withdrawal')">− Withdraw</button>
+      </div>
     </div>`;
   }).join('');
 
-  const totalPnL = totalCurrent - totalStarting;
   const totalCard = `<div class="total-bankroll-card">
     <div class="total-bankroll-label">Total Bankroll</div>
     <div class="total-bankroll-val">$${totalCurrent.toFixed(2)}</div>
-    <div class="total-bankroll-sub">
-      <span class="tb-label">Started: $${totalStarting.toFixed(2)}</span>
-      <span class="tb-pnl ${totalPnL>=0?'up':'down'}">${totalPnL>=0?'+':'-'}$${Math.abs(totalPnL).toFixed(2)}</span>
-    </div>
   </div>`;
 
   list.innerHTML = totalCard + cards;
@@ -1073,7 +1214,7 @@ function exportCSV() {
   a.href=URL.createObjectURL(blob); a.download='the_book.csv'; a.click();
 }
 
-load(); buildTicker(); applyDefaults();
+load(); loadTx(); buildTicker(); applyDefaults();
 </script>
 </body>
 </html>
