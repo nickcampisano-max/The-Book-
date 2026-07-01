@@ -398,6 +398,27 @@ body {
 .cal-summary-val.up   { color: var(--green); text-shadow: 0 0 8px #00e87a55; }
 .cal-summary-val.down { color: var(--red);   text-shadow: 0 0 8px #ff3d5a55; }
 
+.cal-month-history { margin-top: 16px; }
+.cal-month-history-title {
+  font-family: 'Oswald', sans-serif; font-size: 11px; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;
+}
+.cal-month-row {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px 14px; margin-bottom: 8px; cursor: pointer; transition: all 0.15s;
+}
+.cal-month-row.is-viewed { border-color: var(--neon); box-shadow: 0 0 8px var(--neon-glow); }
+.cal-month-row-label {
+  font-family: 'Oswald', sans-serif; font-size: 13px; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase; color: var(--text);
+}
+.cal-month-row-record { font-family: 'Roboto Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 2px; }
+.cal-month-row-val { font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 700; }
+.cal-month-row-val.up   { color: var(--green); text-shadow: 0 0 8px #00e87a55; }
+.cal-month-row-val.down { color: var(--red);   text-shadow: 0 0 8px #ff3d5a55; }
+.cal-month-row-empty { font-family: 'Roboto Mono', monospace; font-size: 11px; color: var(--muted); text-align: center; padding: 10px 0; }
+
 .toast {
   position: fixed; bottom: 24px; left: 50%;
   transform: translateX(-50%) translateY(80px);
@@ -575,6 +596,7 @@ body {
       <div class="cal-summary-val" id="calMonthVal">$0.00</div>
     </div>
   </div>
+  <div class="cal-month-history" id="calMonthHistory"></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1199,6 +1221,50 @@ function renderCalendar() {
   const monthEl = document.getElementById('calMonthVal');
   monthEl.textContent = `${monthTotal>=0?'+':'-'}$${Math.abs(monthTotal).toFixed(2)}`;
   monthEl.className = 'cal-summary-val '+(monthTotal>=0?'up':'down');
+
+  renderMonthHistory(dailyMap, year, month);
+}
+
+function calJumpToMonth(y, m) {
+  calViewDate = new Date(y, m, 1);
+  selectedCalDay = null;
+  renderCalendar();
+}
+
+function renderMonthHistory(dailyMap, viewedYear, viewedMonth) {
+  const container = document.getElementById('calMonthHistory');
+  const monthTotals = {}; // 'YYYY-M' -> { pnl, wins, losses }
+  Object.keys(dailyMap).forEach(key => {
+    const d = new Date(key+'T00:00:00');
+    const mKey = `${d.getFullYear()}-${d.getMonth()}`;
+    if (!monthTotals[mKey]) monthTotals[mKey] = { year: d.getFullYear(), month: d.getMonth(), pnl: 0, wins: 0, losses: 0 };
+    monthTotals[mKey].pnl += dailyMap[key].pnl;
+    dailyMap[key].bets.forEach(b => {
+      if (b.outcome === 'Win') monthTotals[mKey].wins++;
+      else if (b.outcome === 'Loss') monthTotals[mKey].losses++;
+    });
+  });
+
+  const months = Object.values(monthTotals).sort((a,b) => (b.year-a.year) || (b.month-a.month));
+
+  if (!months.length) {
+    container.innerHTML = `<div class="cal-month-history-title">Monthly History</div><div class="cal-month-row-empty">No settled bets yet</div>`;
+    return;
+  }
+
+  const rows = months.map(m => {
+    const label = new Date(m.year, m.month, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const isViewed = m.year===viewedYear && m.month===viewedMonth;
+    return `<div class="cal-month-row${isViewed?' is-viewed':''}" onclick="calJumpToMonth(${m.year},${m.month})">
+      <div>
+        <div class="cal-month-row-label">${label}</div>
+        <div class="cal-month-row-record">${m.wins}-${m.losses}</div>
+      </div>
+      <div class="cal-month-row-val ${m.pnl>=0?'up':'down'}">${m.pnl>=0?'+':'-'}$${Math.abs(m.pnl).toFixed(2)}</div>
+    </div>`;
+  }).join('');
+
+  container.innerHTML = `<div class="cal-month-history-title">Monthly History</div>${rows}`;
 }
 
 function exportCSV() {
